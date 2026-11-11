@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>InstaBot Verse — Hackathon Baseline 3</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:'Segoe UI',system-ui,-apple-system,Arial;background:#fff;color:#111;padding-bottom:20px}
+.topbar{background:#111;color:#fff;text-align:center;padding:10px;font-size:13px;letter-spacing:.22em;font-weight:600}
+header{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;padding:18px 20px 10px;max-width:1180px;margin:0 auto}
+.logo-row{display:flex;gap:12px;align-items:center}
+.ib{width:52px;height:52px;border-radius:50%;background:#111;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;flex-shrink:0}
+.brand h1{margin:0;font-size:30px;line-height:1.05;letter-spacing:-.02em}
+.brand .verse{display:inline-block;background:#ff2e88;color:#fff;border-radius:999px;padding:3px 12px;font-size:14px;letter-spacing:.12em;font-weight:800;margin-top:4px}
+.badge{display:inline-block;background:#111;color:#fff;border-radius:999px;padding:5px 12px;font-size:12px;letter-spacing:.12em;font-weight:700;margin-top:6px}
+.sub{color:#666;font-size:14px;margin-top:6px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-left:auto;align-items:center}
+button{cursor:pointer;border:1px solid #111;border-radius:999px;padding:12px 18px;font-weight:700;background:#fff;color:#111;font-size:14px}
+button.pink{background:#ff2e88;color:#fff;border-color:#ff2e88}
+button.black{background:#111;color:#fff}
+button:disabled{opacity:.5}
+.pill{border:1px solid #ddd;border-radius:999px;padding:8px 12px;font-size:13px;background:#fff}
+.banner{max-width:1180px;margin:14px auto 0;padding:16px 20px;border:1px solid #eee;border-radius:18px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.04)}
+.banner b{font-size:17px}
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.chip{border:1px solid #eee;border-radius:999px;padding:8px 14px;font-size:13px;background:#fafafa}
+.stories{display:flex;gap:18px;overflow-x:auto;padding:18px 20px;max-width:1180px;margin:0 auto}
+.story{flex:0 0 92px;text-align:center;cursor:pointer}
+.circle{width:84px;height:84px;border-radius:50%;border:4px solid #ff2e88;display:flex;align-items:center;justify-content:center;font-size:34px;background:#fff;margin:0 auto}
+.circle.blue{border-color:#00a8e8}.circle.green{border-color:#2ec44a}.circle.dashed{border-style:dashed;border-color:#999;color:#666}
+.story b{display:block;margin-top:8px;font-size:14px}
+.story span{display:block;font-size:12px;color:#666;border:1px solid #eee;border-radius:999px;padding:3px 10px;margin-top:4px}
+.section{max-width:1180px;margin:0 auto;padding:10px 20px}
+.section h2{font-size:30px;letter-spacing:-.02em;margin:10px 0}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.actions{margin-left:0}}
+.card{border:1px solid #eee;border-radius:20px;padding:18px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.03)}
+.card .emoji{font-size:36px}
+.card h3{margin:8px 0 4px;font-size:22px}
+.card p{color:#666;margin:0}
+.preview{height:120px;border-radius:14px;margin-top:14px}
+.preview.pink{background:#ffd6e7}.preview.blue{background:#cfeeff}.preview.green{background:#d6f5d6}
+.enter{width:100%;margin-top:14px;padding:14px;border-radius:999px}
+/* bottom nav removed - Reels / DM / Messages / Profile / Plus are not needed controls */
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+.modal.open{display:flex}
+.modal-box{background:#fff;border-radius:22px;max-width:720px;width:100%;padding:26px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.close{position:absolute;right:18px;top:18px;width:44px;height:44px;border-radius:50%;background:#111;color:#fff;border:0;font-size:22px}
+.modal-box h2{margin:0;font-size:30px}
+.modal-box p{color:#666}
+label{font-weight:700;display:block;margin:18px 0 8px}
+input,textarea{width:100%;border:1px solid #ddd;border-radius:999px;padding:14px 16px;font-size:15px}
+textarea{border-radius:14px}
+.hint{font-size:13px;color:#666;margin-top:6px}
+.botrow{display:flex;align-items:center;gap:10px;border:1px solid #eee;border-radius:999px;padding:12px 16px;margin-top:10px}
+.botrow input[type=checkbox]{width:22px;height:22px}
+.dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#111;color:#fff;padding:12px 18px;border-radius:999px;z-index:500;display:none;font-weight:600}
+#vrOverlay{position:fixed;inset:0;background:#fff;z-index:400;display:none;overflow-y:auto}
+#vrTop{position:sticky;top:0;background:#fff;border-bottom:1px solid #eee;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}
+.vrRing{max-width:760px;margin:20px auto;display:flex;flex-direction:column;gap:14px;padding:0 16px 40px}
+.vrPortal{width:100%;background:#fff;border:2px solid #111;border-radius:18px;padding:22px;cursor:pointer;font-size:18px;text-align:left}
+.debug{max-width:1180px;margin:10px auto;padding:10px 20px;font-size:13px;color:#666}
+.debug b{color:#111}
+</style>
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+</head>
+<body>
+<div class="topbar">INSTABOT VERSE • HACKATHON BASELINE 3</div>
+<header>
+<div class="logo-row">
+<div class="ib">IB</div>
+<div class="brand"><h1>InstaBot Verse</h1><span class="verse">VERSE</span><br><span class="badge">HACKATHON BASELINE 3</span><div class="sub">hybrid ultimate • 2D + VR • folder sideload</div></div>
+</div>
+<div class="actions">
+<button id="testBtn" onclick="window.testUI()" style="border-color:#2ec44a;color:#2ec44a">✓ TEST UI</button>
+<button onclick="document.getElementById('singleFile').click()">Upload Bot File</button>
+<button class="pink" onclick="document.getElementById('folderInput').click()">Upload Folder of Bots</button>
+<button class="black" onclick="window.openGitModal()">● Load from GitHub</button>
+<button onclick="window.openVR2DSafe()">Enter VR</button>
+<button onclick="window.startImmersiveSafe()">🥽 ENTER VR</button>
+<button onclick="window.closeVR()" style="opacity:.5">Exit VR ✕</button>
+</div>
+<input type="file" id="singleFile" accept=".html" style="display:none">
+<input type="file" id="folderInput" webkitdirectory directory multiple style="display:none">
+</header>
+
+<div class="debug" id="debugBar">UI Status: <b id="debugText">Loading…</b> • Tap <b>✓ TEST UI</b> — if it says “UI IS RESPONDING”, buttons are alive.</div>
+
+<div class="banner" id="folderBanner" style="display:none">
+<b id="bannerTitle">Folder loaded — 3 bots added as portals</b>
+<div class="chips" id="bannerChips"></div>
+<div style="text-align:right;margin-top:8px"><a href="#" onclick="document.getElementById('folderBanner').style.display='none';return false" style="color:#111">Dismiss</a></div>
+</div>
+
+<div class="stories" id="stories"></div>
+
+<div class="section">
+<h2>Explore — All Worlds</h2>
+<div class="grid" id="exploreGrid"></div>
+</div>
+
+<!-- GitHub Modal - EXACTLY as in your screenshot -->
+<div class="modal" id="gitModal">
+<div class="modal-box">
+<button class="close" onclick="window.closeGitModal()">✕</button>
+<h2>Load Bots from GitHub Repo</h2>
+<p>Pull bot .html files straight from the same repo — no download needed</p>
+<p style="color:#111;font-weight:700">Detected this repo: <span id="detectedRepo">xxl3g10nxx/monumental-marshmallow-f62851</span> (from GitHub Pages)</p>
+<label>Repo</label>
+<input id="repoInput" value="xxl3g10nxx/monumental-marshmallow-f62851">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+<div><label>Branch</label><input id="branchInput" value="main"></div>
+<div><label>Folder</label><input id="folderInputGit" placeholder="Leave empty for repo root"><div class="hint">Folder inside repo — leave empty to scan repo root</div></div>
+</div>
+<label>Token (optional)</label>
+<input id="tokenInput" placeholder="GitHub token (only if private repo / rate limit)" type="password">
+<div class="hint">Token stays in this tab, never stored or sent anywhere else</div>
+<div style="margin-top:18px"><button class="pink" id="fetchBtn" onclick="window.fetchBits()" style="font-size:16px;padding:14px 22px">Fetch Bits</button></div>
+<div id="gitStatus" style="margin-top:14px;color:#111;font-weight:600"></div>
+<div id="foundBox" style="display:none">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px"><b id="foundTitle">Found 3 bots</b><span><a href="#" onclick="window.selectAll(true);return false">Select All</a> &nbsp; <a href="#" onclick="window.selectAll(false);return false">Deselect All</a></span></div>
+<div id="foundList"></div>
+<button class="black" id="loadSelectedBtn" onclick="window.loadSelected()" style="width:100%;padding:16px;font-size:16px;margin-top:16px">Load Selected Bots as Portals (3)</button>
+<p style="font-size:13px">Loaded bots appear as story circles, Your Bots cards with a GitHub badge, and VR portals. In-memory only.</p>
+</div>
+</div>
+</div>
+
+<div id="vrOverlay">
+<div id="vrTop"><b>INSTABOT VERSE • VR • Tap a portal</b><button onclick="window.closeVR()">Exit VR ✕</button></div>
+<div class="vrRing" id="vrRing"></div>
+<div style="text-align:center;color:#666;padding-bottom:30px">Tap / pinch a portal — staring will not exit</div>
+</div>
+<div id="toast"></div>
+
+<script>
+// Resilient helpers - no single error kills UI
+var MY_GIT_PAGES='https://xxl3g10nxx.github.io/monumental-marshmallow-f62851/';
+var currentXRSession=null;
+var bots=[]; // {name, file, url, size, color, emoji, source, blobUrl}
+var foundBots=[];
+function el(id){ try{ return document.getElementById(id); }catch(e){ return null; } }
+function safeGet(k,f){ try{ var v=window.localStorage.getItem(k); return v?v:f; }catch(e){ return f; } }
+function safeSet(k,v){ try{ window.localStorage.setItem(k,v); }catch(e){} }
+function toast(t){ var e=el('toast'); if(!e){ alert(t); return; } try{ e.textContent=t; e.style.display='block'; setTimeout(function(){ e.style.display='none'; },3500); }catch(err){ alert(t); } }
+window.toast=toast;
+window.testUI=function(){ toast('UI IS RESPONDING ✓ — buttons are alive'); var d=el('debugText'); if(d){ d.textContent='UI IS RESPONDING ✓ — '+new Date().toLocaleTimeString(); } return false; };
+function fmtSize(b){ if(!b) return ''; if(b<1024) return b+' B'; if(b<1024*1024) return (b/1024).toFixed(1)+' KB'; return (b/1024/1024).toFixed(2)+' MB'; }
+function cleanUrl(u, name){
+  if(!u || typeof u!=='string') return MY_GIT_PAGES;
+  u=u.trim();
+  if(u.indexOf('about:srcdoc')!==-1 || u.indexOf('about:')===0 || u.indexOf('data:')===0){ return MY_GIT_PAGES + (name && name.toLowerCase().indexOf('breach')!==-1 ? 'breach.html' : ''); }
+  if(u.indexOf('http')===0 || u.indexOf('blob:')===0) return u;
+  if(u.indexOf('/')===0) return MY_GIT_PAGES + u.replace(/^\//,'');
+  if(u.indexOf('://')===-1) return MY_GIT_PAGES + u;
+  return u;
+}
+function openBotNewWindow(url, name){
+  try{
+    var cleaned=cleanUrl(url, name);
+    if(cleaned.indexOf('about:srcdoc')!==-1) cleaned=MY_GIT_PAGES;
+    var full=cleaned + (cleaned.indexOf('?')!==-1 ? '&' : '?') + 'fullscreen=1&fromPortal=1';
+    if(full.indexOf('about:')===0) full=MY_GIT_PAGES+'?fullscreen=1&fromPortal=1';
+    var session=currentXRSession;
+    function actuallyOpen(){
+      try{ var a=document.createElement('a'); a.href=full; a.target='_blank'; a.rel='noopener noreferrer'; a.style.display='none'; document.body.appendChild(a); a.click(); document.body.removeChild(a); toast('Opened '+(name||'Bot')+' in new window'); return true; }catch(e){}
+      try{ var w=window.open(full, 'BOT_WINDOW_'+Date.now(), 'popup=yes,width=1920,height=1080,left=0,top=0,menubar=no,toolbar=no,location=no,status=no,noopener,noreferrer'); if(w){ try{w.focus();}catch(e){} return true; } }catch(e){}
+      try{ window.top.location.href=full; return true; }catch(e){}
+      try{ window.location.href=full; return true; }catch(e){}
+      return false;
+    }
+    if(session){
+      toast('Exiting InstaVerse immersive, then opening '+(name||'Bot')+' in new window...');
+      try{ session.addEventListener('end', function onEnd(){ session.removeEventListener('end', onEnd); currentXRSession=null; setTimeout(actuallyOpen,180); }, {once:true}); session.end(); return true; }catch(e){ return actuallyOpen(); }
+    } else { return actuallyOpen(); }
+  }catch(e){ toast('Open failed: '+e.message); return false; }
+}
+window.openBotNewWindow=openBotNewWindow;
+// Render stories + explore
+var COLORS=[{name:'Neon Pink',border:'#ff2e88',bg:'#ffd6e7',emoji:'🤖'},{name:'Cyber Blue',border:'#00a8e8',bg:'#cfeeff',emoji:'🥽'},{name:'Toxic Green',border:'#2ec44a',bg:'#d6f5d6',emoji:'🧪'}];
+function render(){
+  var stories=el('stories'); stories.innerHTML='';
+  bots.forEach(function(b,i){
+    var c=COLORS[i%3];
+    var div=document.createElement('div'); div.className='story';
+    div.innerHTML='<div class="circle" style="border-color:'+c.border+'">'+(b.emoji||c.emoji)+'</div><b>'+b.name+'</b><span style="border-color:'+c.border+'">'+c.name+'</span>';
+    div.onclick=function(){ openBotNewWindow(b.url||b.blobUrl, b.name); };
+    stories.appendChild(div);
+  });
+  // Add Sideload story
+  var add=document.createElement('div'); add.className='story';
+  add.innerHTML='<div class="circle dashed">+</div><b>Add Sideload</b><span>via file</span>';
+  add.onclick=function(){ el('folderInput').click(); };
+  stories.appendChild(add);
+  var grid=el('exploreGrid'); grid.innerHTML='';
+  bots.forEach(function(b,i){
+    var c=COLORS[i%3];
+    var card=document.createElement('div'); card.className='card';
+    card.innerHTML='<div class="emoji">'+(b.emoji||c.emoji)+'</div><h3>'+b.name+'</h3><p>'+(b.source||'Sideload')+' • '+(b.size?fmtSize(b.size):'')+' • '+c.name+'</p><div class="preview" style="background:'+c.bg+'"></div>';
+    var btn=document.createElement('button'); btn.className='enter'; btn.textContent='Enter World';
+    btn.onclick=function(){ openBotNewWindow(b.url||b.blobUrl, b.name); };
+    card.appendChild(btn);
+    grid.appendChild(card);
+  });
+  if(bots.length===0){
+    grid.innerHTML='<div class="card"><h3>No bots yet</h3><p>Tap <b>Load from GitHub</b> → Fetch Bits, or <b>Upload Folder of Bots</b> to add your 3 bots.</p></div>';
+  }
+  // Banner
+  var banner=el('folderBanner');
+  if(bots.length>0){
+    banner.style.display='block';
+    el('bannerTitle').textContent='Folder loaded — '+bots.length+' bot'+(bots.length>1?'s':'')+' added as portals';
+    var chips=el('bannerChips'); chips.innerHTML='';
+    bots.forEach(function(b,i){
+      var c=COLORS[i%3];
+      var chip=document.createElement('span'); chip.className='chip'; chip.textContent=(b.emoji||c.emoji)+' '+b.name+' • '+(b.size?fmtSize(b.size):'')+' • '+c.name;
+      chips.appendChild(chip);
+    });
+  }
+  try{ renderVRList(); }catch(e){}
+}
+window.render=render;
+// GitHub modal
+window.openGitModal=function(){ var m=el('gitModal'); if(m) m.classList.add('open'); };
+window.closeGitModal=function(){ var m=el('gitModal'); if(m) m.classList.remove('open'); };
+// Detect repo from Pages URL (like screenshot: Detected this repo: xxl3g10nxx/monumental-marshmallow-f62851 (from GitHub Pages))
+try{
+  var host=window.location.host; // e.g. xxl3g10nxx.github.io
+  var path=window.location.pathname; // /monumental-marshmallow-f62851/
+  if(host.indexOf('.github.io')!==-1){
+    var owner=host.split('.')[0];
+    var repo=path.split('/').filter(function(x){ return x; })[0] || '';
+    if(owner && repo){ var det=owner+'/'+repo; el('detectedRepo').textContent=det; el('repoInput').value=det; }
+  }
+}catch(e){}
+window.selectAll=function(on){ foundBots.forEach(function(b){ b.selected=on; }); renderFound(); };
+function renderFound(){
+  var box=el('foundBox'); if(!box) return;
+  box.style.display='block';
+  el('foundTitle').textContent='Found '+foundBots.length+' bots';
+  var list=el('foundList'); list.innerHTML='';
+  foundBots.forEach(function(b,i){
+    var row=document.createElement('div'); row.className='botrow';
+    var c=COLORS[i%3];
+    row.innerHTML='<input type="checkbox" '+(b.selected?'checked':'')+'><span class="dot" style="background:'+c.border+'"></span><b style="flex:1">'+b.file+'</b><span style="color:#666">'+fmtSize(b.size)+'</span><span style="color:#666">'+b.file+'</span>';
+    row.querySelector('input').onchange=function(){ b.selected=this.checked; updateLoadBtn(); };
+    list.appendChild(row);
+  });
+  updateLoadBtn();
+}
+function updateLoadBtn(){
+  var n=foundBots.filter(function(b){ return b.selected; }).length;
+  el('loadSelectedBtn').textContent='Load Selected Bots as Portals ('+n+')';
+}
+window.fetchBits=async function(){
+  var repo=el('repoInput').value.trim() || 'xxl3g10nxx/monumental-marshmallow-f62851';
+  var branch=el('branchInput').value.trim() || 'main';
+  var folder=el('folderInputGit').value.trim();
+  var token=el('tokenInput').value.trim();
+  var status=el('gitStatus'); status.textContent='Fetching from '+repo+'@'+branch+'...';
+  var headers={};
+  if(token) headers['Authorization']='token '+token;
+  var api='https://api.github.com/repos/'+repo+'/contents/'+(folder?folder:'')+'?ref='+encodeURIComponent(branch);
+  try{
+    var res=await fetch(api, {headers:headers});
+    if(!res.ok){
+      var txt=''; try{ txt=await res.text(); }catch(e){}
+      throw new Error('GitHub API '+res.status+' — '+txt.substring(0,140)+' | If 404, repo private / name wrong. If 403, rate-limited — add token.');
+    }
+    var items=await res.json();
+    if(!Array.isArray(items)) items=[items];
+    // If folder is a file, handle
+    foundBots=[];
+    items.forEach(function(it){
+      if(it.type==='file' && it.name.toLowerCase().endsWith('.html')){
+        foundBots.push({file:it.name, name:it.name.replace('.html',''), url: MY_GIT_PAGES + (folder?folder+'/':'') + it.name, path:(folder?folder+'/':'')+it.name, size:it.size||0, selected:true});
+      }
+    });
+    if(foundBots.length===0){ status.textContent='No .html bots found in that folder. Try Folder empty for repo root.'; return; }
+    status.textContent='Found '+foundBots.length+' bots in '+repo+'@'+branch+' — tick the ones to load';
+    renderFound();
+  }catch(e){
+    // Fallback to known 3 bots from screenshot so Fetch still works even if API blocked
+    status.textContent='Fetch failed: '+e.message+' — showing known 3 bots from your repo as fallback (tap Load to use them).';
+    foundBots=[
+      {file:'2D_InstaVerse.html', name:'2D_InstaVerse', url:MY_GIT_PAGES+'2D_InstaVerse.html', path:'2D_InstaVerse.html', size:286100, selected:true},
+      {file:'Beta.html', name:'Beta', url:MY_GIT_PAGES+'Beta.html', path:'Beta.html', size:709700, selected:true},
+      {file:'Try_This.html', name:'Try_This', url:MY_GIT_PAGES+'Try_This.html', path:'Try_This.html', size:1480000, selected:true}
+    ];
+    renderFound();
+  }
+};
+window.loadSelected=function(){
+  var sel=foundBots.filter(function(b){ return b.selected; });
+  if(sel.length===0){ toast('Tick at least one bot'); return; }
+  sel.forEach(function(b,idx){
+    var c=COLORS[(bots.length+idx)%3];
+    if(!bots.find(function(x){ return x.file===b.file; })){
+      bots.push({name:b.name, file:b.file, url:b.url, size:b.size, color:c.name, emoji:c.emoji, source:'GitHub'});
+    }
+  });
+  render();
+  window.closeGitModal();
+  toast('Loaded '+sel.length+' bot(s) as portals');
+};
+// Upload Bot File
+el('singleFile').addEventListener('change', function(e){
+  var f=e.target.files[0]; if(!f) return;
+  var url=URL.createObjectURL(f);
+  bots.push({name:f.name.replace('.html',''), file:f.name, url:url, blobUrl:url, size:f.size, emoji:'🤖', source:'Sideload'});
+  render(); toast('Added '+f.name);
+});
+// Upload Folder of Bots
+el('folderInput').addEventListener('change', function(e){
+  var files=Array.prototype.slice.call(e.target.files).filter(function(f){ return f.name.toLowerCase().endsWith('.html'); });
+  if(files.length===0){ toast('No .html files in that folder'); return; }
+  files.forEach(function(f){
+    var url=URL.createObjectURL(f);
+    if(!bots.find(function(x){ return x.file===f.name; })){
+      bots.push({name:f.name.replace('.html',''), file:f.name, url:url, blobUrl:url, size:f.size, emoji:'🤖', source:'Sideload'});
+    }
+  });
+  render(); toast('Folder loaded — '+files.length+' bots added as portals');
+});
+// Message from bot asking to open in new window - ignore about:srcdoc
+window.addEventListener('message', function(e){
+  if(!e.data) return;
+  if(e.data.type==='REQUEST_EXIT_IMMERSIVE_AND_OPEN_WINDOW' || e.data.type==='OPEN_BOT_IN_NEW_WINDOW' || e.data.type==='BREACH_OPEN_FULLSCREEN'){
+    var url=e.data.url;
+    if(!url || url.indexOf('about:srcdoc')!==-1 || url.indexOf('about:')===0){ url=MY_GIT_PAGES; }
+    openBotNewWindow(url, 'Bot from portal');
+  }
+});
+// VR
+function renderVRList(){
+  var ring=el('vrRing'); if(!ring) return;
+  ring.innerHTML='';
+  var intro=document.createElement('div'); intro.className='vrPortal'; intro.style.borderColor='#111';
+  intro.innerHTML='<b>INSTABOT VERSE</b><div style="color:#666;margin-top:6px">Your bots below — tap any bot to exit and open it in a new window.</div>';
+  ring.appendChild(intro);
+  bots.forEach(function(b){
+    var d=document.createElement('div'); d.className='vrPortal';
+    d.innerHTML='<b>🌐 '+b.name+'</b><div style="color:#666;margin-top:6px">'+(b.source||'')+' • '+(b.size?fmtSize(b.size):'')+'</div><div style="margin-top:10px;color:#ff2e88">▶ TAP TO OPEN →</div>';
+    d.addEventListener('pointerdown', function(ev){ ev.preventDefault(); openBotNewWindow(b.url||b.blobUrl, b.name); });
+    d.addEventListener('click', function(){ openBotNewWindow(b.url||b.blobUrl, b.name); });
+    ring.appendChild(d);
+  });
+  var test=document.createElement('div'); test.className='vrPortal'; test.style.borderColor='#00a8e8';
+  test.innerHTML='<b>TEST — VR IS RESPONDING</b><div style="color:#666;margin-top:6px">If you can tap this, VR input works. Tap to close VR.</div>';
+  test.addEventListener('pointerdown', function(){ window.closeVR(); });
+  test.addEventListener('click', function(){ window.closeVR(); });
+  ring.appendChild(test);
+}
+window.renderVRList=renderVRList;
+window.openVR2DSafe=function(){ try{ renderVRList(); }catch(e){} var ov=el('vrOverlay'); if(ov) ov.style.display='block'; toast('VR 2D World — tap a portal'); };
+window.closeVR=function(){ var ov=el('vrOverlay'); if(ov) ov.style.display='none'; };
+// True Immersive
+var immersiveSession=null, immersiveRenderer=null, immersivePortals=[];
+function makeTex(title, sub){
+  var c=document.createElement('canvas'); c.width=512; c.height=256;
+  var ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,512,256);
+  ctx.strokeStyle='#ff2e88'; ctx.lineWidth=10; ctx.strokeRect(8,8,496,240);
+  ctx.fillStyle='#111'; ctx.font='bold 32px Arial'; ctx.textAlign='center'; ctx.fillText(title,256,90);
+  ctx.fillStyle='#666'; ctx.font='20px Arial'; ctx.fillText(sub,256,150);
+  ctx.fillStyle='#ff2e88'; ctx.font='bold 22px Arial'; ctx.fillText('PINCH / TRIGGER TO OPEN',256,200);
+  return new THREE.CanvasTexture(c);
+}
+window.startImmersiveSafe=async function(){
+  if(!window.THREE){ toast('3D engine failed — opening VR 2D World'); window.openVR2DSafe(); return; }
+  if(!navigator.xr){ toast('No WebXR — opening VR 2D World'); window.openVR2DSafe(); return; }
+  try{ var sup=await navigator.xr.isSessionSupported('immersive-vr'); if(!sup){ window.openVR2DSafe(); return; } }catch(e){ window.openVR2DSafe(); return; }
+  try{
+    var renderer=new THREE.WebGLRenderer({antialias:true});
+    renderer.setPixelRatio(window.devicePixelRatio); renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled=true; renderer.setClearColor(0xffffff,1);
+    var scene=new THREE.Scene(); scene.background=new THREE.Color(0xffffff); scene.fog=new THREE.Fog(0xffffff,5,18);
+    var cam=new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.1, 100); cam.position.set(0,1.6,0); scene.add(cam);
+    scene.add(new THREE.AmbientLight(0xffffff,1.0));
+    var dir=new THREE.DirectionalLight(0xffffff,1.2); dir.position.set(2,5,3); scene.add(dir);
+    var grid=new THREE.GridHelper(20,20,0xff2e88,0xcccccc); grid.position.y=0; scene.add(grid);
+    immersivePortals=[];
+    var list=bots.length?bots:[{name:'Load bots first', url:MY_GIT_PAGES}];
+    list.forEach(function(b,i){
+      var ang=(i-(list.length-1)/2)*0.6; var x=Math.sin(ang)*3.2, z=-Math.cos(ang)*3.2;
+      var tex=makeTex(b.name.substring(0,14), 'TAP TO OPEN');
+      var mesh=new THREE.Mesh(new THREE.PlaneGeometry(1.9,0.95), new THREE.MeshBasicMaterial({map:tex}));
+      mesh.position.set(x,1.6,z); mesh.lookAt(0,1.6,0); mesh.userData.bot=b; scene.add(mesh); immersivePortals.push(mesh);
+    });
+    var exitTex=makeTex('EXIT VR','Pinch to leave');
+    var exitMesh=new THREE.Mesh(new THREE.PlaneGeometry(1.4,0.7), new THREE.MeshBasicMaterial({map:exitTex}));
+    exitMesh.position.set(0,1.6,2.5); exitMesh.rotation.y=Math.PI; exitMesh.userData.isExit=true; scene.add(exitMesh); immersivePortals.push(exitMesh);
+    function handleSelect(controller){
+      var ray=new THREE.Raycaster(); var pos=new THREE.Vector3(); var d=new THREE.Vector3();
+      controller.getWorldPosition(pos); controller.getWorldDirection(d); ray.set(pos,d);
+      var hits=ray.intersectObjects(immersivePortals);
+      if(hits.length>0){
+        var h=hits[0].object;
+        if(h.userData.isExit){ endImmersive(); return; }
+        if(h.userData.bot){ var bot=h.userData.bot; endImmersive(); setTimeout(function(){ openBotNewWindow(bot.url||bot.blobUrl, bot.name); },400); }
+      } else {
+        var ray2=new THREE.Raycaster(); var d2=new THREE.Vector3(); cam.getWorldDirection(d2); ray2.set(cam.position,d2);
+        var hits2=ray2.intersectObjects(immersivePortals);
+        if(hits2.length>0){
+          var h2=hits2[0].object;
+          if(h2.userData.isExit){ endImmersive(); return; }
+          if(h2.userData.bot){ var bot2=h2.userData.bot; endImmersive(); setTimeout(function(){ openBotNewWindow(bot2.url||bot2.blobUrl, bot2.name); },400); }
+        }
+      }
+    }
+    [0,1].forEach(function(idx){
+      var ctrl=renderer.xr.getController(idx);
+      ctrl.addEventListener('select', function(){ handleSelect(ctrl); });
+      ctrl.addEventListener('selectstart', function(){ handleSelect(ctrl); });
+      scene.add(ctrl);
+    });
+    var lastGaze=null;
+    renderer.setAnimationLoop(function(){
+      if(!immersiveSession) return;
+      var ray=new THREE.Raycaster(); var d=new THREE.Vector3(); cam.getWorldDirection(d); ray.set(cam.position,d);
+      var hits=ray.intersectObjects(immersivePortals);
+      if(hits.length>0){ var m=hits[0].object; lastGaze=m; m.scale.setScalar(1.08); } else{ lastGaze=null; }
+      immersivePortals.forEach(function(p){ if(p!==lastGaze) p.scale.setScalar(1); });
+      renderer.render(scene,cam);
+    });
+    immersiveRenderer=renderer;
+    var session=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor','bounded-floor']});
+    immersiveSession=session; currentXRSession=session;
+    await renderer.xr.setSession(session);
+    toast('InstaVerse Immersive — pinch OR trigger a portal.');
+    session.addEventListener('end', function(){ try{renderer.setAnimationLoop(null);}catch(e){} immersiveSession=null; currentXRSession=null; immersiveRenderer=null; toast('Left immersive — back in shell'); });
+  }catch(e){ toast('Immersive failed — opening VR 2D World: '+e.message); window.openVR2DSafe(); }
+};
+function endImmersive(){ try{ if(immersiveSession) immersiveSession.end(); }catch(e){} }
+// Init - preload the 3 known bots from screenshot as fallback so UI is not empty, but Fetch can refresh them
+try{
+  bots=[
+    {name:'2D_InstaVerse', file:'2D_InstaVerse.html', url:MY_GIT_PAGES+'2D_InstaVerse.html', size:286100, emoji:'🤖', source:'GitHub'},
+    {name:'Beta', file:'Beta.html', url:MY_GIT_PAGES+'Beta.html', size:709700, emoji:'🥽', source:'GitHub'},
+    {name:'Try_This', file:'Try_This.html', url:MY_GIT_PAGES+'Try_This.html', size:1480000, emoji:'🧪', source:'GitHub'}
+  ];
+  render();
+  var dbg=el('debugText'); if(dbg) dbg.textContent='UI LOADED ✓ — 3 bots preloaded (2D_InstaVerse, Beta, Try_This) — tap TEST UI to confirm';
+}catch(e){ console.error(e); }
+</script>
+</body>
+</html>
