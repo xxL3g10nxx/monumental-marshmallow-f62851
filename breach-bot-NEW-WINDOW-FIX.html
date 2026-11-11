@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BREACH - Bug Bounty Bot</title>
+<style>
+*{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#0b0e1a;color:#e8ecff}
+header{position:sticky;top:0;z-index:10;background:#11142a;border-bottom:1px solid #2a2f55;padding:12px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+h1{font-size:20px;margin:0;letter-spacing:.12em} h1 span{color:#ff2e88}
+.pill{background:#1c2145;border:1px solid #343b73;border-radius:999px;padding:6px 10px;font-size:13px}
+button{background:#ff2e88;color:#fff;border:0;border-radius:999px;padding:10px 16px;font-weight:700;cursor:pointer}
+button.secondary{background:#222850;border:1px solid #3a4175}
+button.ghost{background:transparent;border:1px solid #3a4175}
+button.big{padding:14px 20px;font-size:16px}
+main{max-width:980px;margin:0 auto;padding:18px 16px 80px}
+.card{background:#141832;border:1px solid #2b3163;border-radius:18px;padding:18px;margin:14px 0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.chip{padding:8px 12px;border-radius:999px;border:1px solid #3a4175;background:#1a1f45;cursor:pointer}
+.chip.active{background:#ff2e88;border-color:#ff2e88}
+input,select,textarea{width:100%;background:#0f1330;border:1px solid #343b73;color:#fff;border-radius:12px;padding:12px;font-size:15px}
+label{font-size:13px;color:#aab0d6}
+.fakeapp{background:#0a0d22;border:1px dashed #4a528f;border-radius:12px;padding:14px;margin-top:12px}
+.hud{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.hud div{background:#0f1330;border:1px solid #2b3163;border-radius:12px;padding:12px;text-align:center}
+.hud b{font-size:22px;display:block}
+.hidden{display:none!important}
+#vrOverlay{position:fixed;inset:0;background:#ffffff;color:#111;z-index:9999;display:none;overflow:hidden}
+#vrTop{position:absolute;top:0;left:0;right:0;background:#fff;border-bottom:1px solid #ddd;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;z-index:10}
+#vrStage{position:absolute;inset:60px 0 0;overflow-y:auto;background:#ffffff!important;padding:20px}
+.vrRing{position:relative;width:100%;max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.vrPortal{position:relative;width:100%;margin:0;background:#11142a;color:#fff;border-radius:18px;padding:22px;text-align:left;border:3px solid #ff2e88;cursor:pointer;font-size:18px}
+.vrPortal:hover{transform:scale(1.05)}
+.vrPortal small{display:block;color:#aab0d6;margin-top:6px}
+#gazeDot{position:absolute;width:36px;height:36px;border:3px solid #ff2e88;border-radius:50%;left:50%;top:50%;margin:-18px 0 0 -18px;z-index:5;pointer-events:none}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:10000;display:none;font-size:28px;text-align:center;padding-top:30vh}
+#toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#111;color:#fff;padding:12px 16px;border-radius:999px;z-index:10001;display:none}
+@media(max-width:640px){.hud{grid-template-columns:repeat(2,1fr)}}
+</style>
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+</head>
+<body>
+<header>
+<h1>BREACH <span>BUG BOUNTY BOT</span></h1>
+<span class="pill" id="scorePill">Score 0 • Flags 0/5 • Rank: Rookie</span>
+<span class="pill" id="timerPill">00:00</span>
+<span class="pill" id="musicPill">♪ PAUSED</span>
+<div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+<button id="playBtn" class="secondary">▶ Play Soundtrack</button>
+<button id="vrBtn">Enter VR World</button><button id="immersiveBtn" style="background:#00c2ff">🥽 Enter Immersive 3D</button><button id="popBtn" class="secondary">⤢ Open in New Window</button>
+</div>
+</header>
+<main><div id="iframeBanner" style="display:none;background:#fff3cd;color:#111;border:2px solid #ffb300;border-radius:14px;padding:14px;margin-bottom:12px"><b>You are inside a portal window.</b><br>Tap the panel to ask InstaVerse to exit immersive and open BREACH in a new window.</div>
+<div class="card">
+<h2 style="margin:0">Find the bug. File the bounty. Get paid.</h2>
+<p style="color:#aab0d6">A playable bug bounty world. Pick one challenge at a time — no clutter. Each one is a fake app with a real bug pattern. Find it, get the flag, file the report.</p>
+<div class="row">
+<label>Voice mode</label>
+<select id="voiceMode" style="width:180px"><option>Sarcastic</option><option>Hype</option><option>Chill</option></select>
+<label>Track</label>
+<select id="trackSel" style="width:180px"><option>NEON BREACH - 140 BPM</option><option>GHOST PROTOCOL - 120 BPM</option><option>OVERDRIVE - 150 BPM</option></select>
+<label>Intensity <span id="intVal">70%</span></label>
+<input id="intensity" type="range" min="0" max="100" value="70" style="width:160px">
+<label>Volume</label>
+<input id="volume" type="range" min="0" max="100" value="70" style="width:120px">
+<button id="muteBtn" class="ghost">Mute</button>
+</div>
+<div class="row" style="margin-top:10px"><div id="viz" style="height:8px;background:#222850;border-radius:999px;flex:1;overflow:hidden"><div id="vizBar" style="height:100%;width:20%;background:linear-gradient(90deg,#ff2e88,#00e5ff)"></div></div><span id="vizLabel">Beat visualizer</span></div>
+</div>
+
+<div class="card"><div class="row" id="challengeTabs"></div></div>
+
+<div class="card" id="challengeCard">
+<h2 id="chTitle" style="margin:0 0 6px"></h2>
+<p id="chDesc" style="color:#aab0d6"></p>
+<div class="fakeapp" id="fakeApp"></div>
+<div class="row" style="margin-top:14px">
+<button id="hintBtn" class="secondary big">💡 Hint</button>
+<button id="checkBtn" class="big">Check / Submit Flag</button>
+<button id="reportBtn" class="secondary big">File Report</button>
+<button id="copyBtn" class="secondary big">Copy Report</button>
+</div>
+<div id="hintBox" class="card hidden" style="background:#1a1f45"></div>
+<div id="reportBox" class="card hidden" style="background:#0f1330;white-space:pre-wrap"></div>
+<div id="resultBox" style="margin-top:12px;font-weight:700"></div>
+</div>
+
+</main>
+
+<div id="vrOverlay">
+<div id="vrTop"><b>BREACH VR WORLD LOADED • White World</b><div><button id="vrPlayBtn" class="secondary">▶ VR Play/Pause</button> <button id="vrExitBtn">Exit VR ✕</button></div></div>
+<div id="vrStage"><div id="gazeDot"></div><div class="vrRing" id="vrRing"></div><div style="position:absolute;left:50%;bottom:18px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px">Drag to look • Hover a portal to glow • Click / stare 1.2s to enter • Exit VR is top-right</div></div>
+</div>
+<div id="portalOverlay" style="position:fixed;inset:0;background:rgba(5,6,20,0.96);z-index:20000;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;color:#fff"><h2>🥽 BREACH PORTAL</h2><p>You tapped BREACH inside immersive InstaVerse. BREACH cannot open a window from inside immersive - InstaVerse must exit immersive first.</p><p><b>Tap below to ask InstaVerse to exit and open BREACH in a new window.</b></p><button id="portalOpenBtn" style="font-size:20px;padding:18px 28px;margin-top:12px">⤢ EXIT INSTAVERSE & OPEN BREACH IN NEW WINDOW →</button><button id="portalStayBtn" class="secondary" style="margin-top:12px">Stay in portal (2D only)</button></div><div id="confetti">🎉🎉 FLAG FOUND! +100 🎉🎉</div>
+<div id="toast"></div>
+
+<script>
+const challenges=[
+{id:1,title:"1 • XSS in Comments",desc:"A comment box renders HTML without escaping. Try a classic payload to steal the flag.",hint:"Try: <img src=x onerror=alert(1)> - the app will treat it as a flag trigger in this demo.",fake:'<label>Leave a comment</label><input id="in1" placeholder="<img src=x onerror=alert(1)>"><p style="color:#aab0d6;font-size:13px">Preview renders below - if it were vulnerable, your payload would run.</p>',check:v=>v.includes("onerror")||v.includes("<script")||v.includes("<img"),flag:"BREACH-XSS-7F3A"},
+{id:2,title:"2 • SQLi Login Bypass",desc:"Login form concatenates input into SQL. Bypass it without a real password.",hint:"Try: admin' OR '1'='1",fake:'<label>Username</label><input id="in2" placeholder="admin\' OR \'1\'=\'1"><label>Password</label><input id="in2b" placeholder="anything">',check:v=>v.includes("' OR")||v.includes('" OR'),flag:"BREACH-SQLI-9C2D"},
+{id:3,title:"3 • IDOR - Change the ID",desc:"Profile URL uses /user/12. Change it to see another user's flag.",hint:"Change the ID from 12 to 13, 1, or 7 - the app checks for a different ID.",fake:'<label>Profile URL</label><input id="in3" value="https://app.example/user/12">',check:v=>v.includes("/user/13")||v.includes("/user/1")||v.includes("/user/7"),flag:"BREACH-IDOR-4A8E"},
+{id:4,title:"4 • SSRF - Internal URL",desc:"Image fetcher fetches any URL. Point it at internal metadata.",hint:"Try: http://169.254.169.254/latest/meta-data/ or http://localhost/admin",fake:'<label>Fetch image URL</label><input id="in4" placeholder="http://169.254.169.254/latest/meta-data/">',check:v=>v.includes("169.254")||v.includes("localhost")||v.includes("127.0.0.1"),flag:"BREACH-SSRF-2B9F"},
+{id:5,title:"5 • Broken JWT",desc:"JWT has alg=none. Change alg to none and drop the signature.",hint:"Set header alg to none and remove signature part - payload with admin:true.",fake:'<label>JWT header</label><input id="in5" placeholder=\'{"alg":"none","typ":"JWT"}\'><label>Payload</label><input id="in5b" placeholder=\'{"user":"admin","admin":true}\'>',check:v=>v.includes("none"),flag:"BREACH-JWT-5E1C"},
+];
+let cur=0, score=0, found=new Set(), start=Date.now(), timerInt=null;
+const tabs=document.getElementById('challengeTabs');
+challenges.forEach((c,i)=>{let b=document.createElement('button');b.className='chip'+(i===0?' active':'');b.textContent=c.title;b.onclick=()=>{cur=i;render();document.querySelectorAll('.chip').forEach((x,j)=>x.classList.toggle('active',j===i))};tabs.appendChild(b)});
+function render(){
+ let c=challenges[cur];
+ document.getElementById('chTitle').textContent=c.title;
+ document.getElementById('chDesc').textContent=c.desc;
+ document.getElementById('fakeApp').innerHTML=c.fake;
+ document.getElementById('hintBox').classList.add('hidden');
+ document.getElementById('reportBox').classList.add('hidden');
+ document.getElementById('resultBox').textContent = found.has(c.id) ? "✅ Flag already found: "+c.flag : "";
+}
+function speak(text){
+ try{let u=new SpeechSynthesisUtterance(text);let m=document.getElementById('voiceMode').value;u.rate=m==='Hype'?1.15:m==='Chill'?0.85:1;u.pitch=m==='Hype'?1.2:m==='Chill'?0.8:1;u.volume=1;speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}
+}
+function toast(t){let el=document.getElementById('toast');el.textContent=t;el.style.display='block';setTimeout(()=>el.style.display='none',2600)}
+function updateHUD(){
+ let rank=score>=400?'Elite Hunter':score>=200?'Pro Hunter':score>=100?'Hunter':'Rookie';
+ document.getElementById('scorePill').textContent=`Score ${score} • Flags ${found.size}/5 • Rank: ${rank}`;
+}
+function confetti(){let el=document.getElementById('confetti');el.style.display='block';setTimeout(()=>el.style.display='none',1800)}
+document.getElementById('hintBtn').onclick=()=>{
+ let box=document.getElementById('hintBox');box.textContent="HINT: "+challenges[cur].hint;box.classList.remove('hidden');speak("Hint time. "+challenges[cur].hint);
+};
+document.getElementById('checkBtn').onclick=()=>{
+ let c=challenges[cur];let vals=[...document.querySelectorAll('#fakeApp input')].map(i=>i.value).join(' ');
+ let ok=c.check(vals);
+ if(ok && !found.has(c.id)){found.add(c.id);score+=100;updateHUD();confetti();document.getElementById('resultBox').textContent="🎉 FLAG: "+c.flag;speak("Flag found! Nice hacking.");toast("Flag found +100");}
+ else if(ok){document.getElementById('resultBox').textContent="Already found: "+c.flag;}
+ else{document.getElementById('resultBox').textContent="Not yet - try the Hint button.";speak("Not quite, try again.");}
+};
+function reportText(){let c=challenges[cur];return `BREACH BOUNTY REPORT\nChallenge: ${c.title}\nFlag: ${found.has(c.id)?c.flag:"(not yet found)"}\nScore: ${score}\nSummary: Found ${c.title} by testing input validation / access control.\nImpact: Attacker can bypass controls and access data.\nFix: Validate + encode input, use parameterized queries, enforce authz, block SSRF.\nReporter: BREACH Bot`;}
+document.getElementById('reportBtn').onclick=()=>{let b=document.getElementById('reportBox');b.textContent=reportText();b.classList.remove('hidden');speak("Report filed.");};
+document.getElementById('copyBtn').onclick=async()=>{let t=reportText();try{await navigator.clipboard.writeText(t);toast("Report copied");}catch(e){let b=document.getElementById('reportBox');b.textContent=t+"\n\n(Copy blocked - select all and copy manually)";b.classList.remove('hidden');}};
+
+// MUSIC - Web Audio procedural
+let actx=null, musicOn=false, master=null, intensity=0.7, muted=false, step=0, musicTimer=null;
+function ensureAudio(){if(!actx){actx=new (window.AudioContext||window.webkitAudioContext)();master=actx.createGain();master.gain.value=0.35;master.connect(actx.destination);} if(actx.state==='suspended') actx.resume();}
+function playKick(t){let o=actx.createOscillator(),g=actx.createGain();o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(40,t+0.12);g.gain.setValueAtTime(0.9,t);g.gain.exponentialRampToValueAtTime(0.01,t+0.18);o.connect(g);g.connect(master);o.start(t);o.stop(t+0.2);}
+function playHat(t){let b=actx.createBuffer(1,2205,actx.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;let s=actx.createBufferSource();s.buffer=b;let f=actx.createBiquadFilter();f.type='highpass';f.frequency.value=6000;let g=actx.createGain();g.gain.setValueAtTime(0.18,t);g.gain.exponentialRampToValueAtTime(0.01,t+0.05);s.connect(f);f.connect(g);g.connect(master);s.start(t);}
+function playBass(t,fr){let o=actx.createOscillator(),g=actx.createGain();o.type='sawtooth';o.frequency.value=fr;let f=actx.createBiquadFilter();f.type='lowpass';f.frequency.setValueAtTime(900,t);f.frequency.exponentialRampToValueAtTime(200,t+0.2);g.gain.setValueAtTime(0.35,t);g.gain.exponentialRampToValueAtTime(0.01,t+0.25);o.connect(f);f.connect(g);g.connect(master);o.start(t);o.stop(t+0.3);}
+function playArp(t,fr){let o=actx.createOscillator(),g=actx.createGain();o.type='square';o.frequency.value=fr;g.gain.setValueAtTime(0.08,t);g.gain.exponentialRampToValueAtTime(0.01,t+0.15);o.connect(g);g.connect(master);o.start(t);o.stop(t+0.18);}
+function tick(){
+ if(!musicOn||!actx) return;
+ let bpm=document.getElementById('trackSel').selectedIndex===1?120:document.getElementById('trackSel').selectedIndex===2?150:140;
+ let spb=60/bpm/2; let t=actx.currentTime+0.05;
+ let bassNotes=[55,55,65.4,49]; let arpNotes=[220,261,329,392,440];
+ if(step%4===0 && intensity>0.25) playKick(t);
+ if(step%2===1 && intensity>0.4) playHat(t);
+ if(step%4===2 && intensity>0.55) playBass(t,bassNotes[Math.floor(step/4)%4]);
+ if(intensity>0.3) playArp(t,arpNotes[step%arpNotes.length]);
+ document.getElementById('vizBar').style.width=(20+intensity*70+Math.random()*10)+'%';
+ step++;
+}
+function toggleMusic(){
+ ensureAudio();
+ musicOn=!musicOn;
+ if(musicOn){if(musicTimer) clearInterval(musicTimer);musicTimer=setInterval(tick,220);document.getElementById('playBtn').textContent='⏸ Pause Soundtrack';document.getElementById('musicPill').textContent='♪ PLAYING';document.getElementById('vrPlayBtn').textContent='⏸ VR Pause';}
+ else{if(musicTimer) clearInterval(musicTimer);document.getElementById('playBtn').textContent='▶ Play Soundtrack';document.getElementById('musicPill').textContent='♪ PAUSED';document.getElementById('vrPlayBtn').textContent='▶ VR Play';}
+}
+document.getElementById('playBtn').onclick=toggleMusic;
+document.getElementById('vrPlayBtn').onclick=toggleMusic;
+document.getElementById('intensity').oninput=e=>{intensity=e.target.value/100;document.getElementById('intVal').textContent=e.target.value+'%'};
+document.getElementById('volume').oninput=e=>{if(master) master.gain.value=e.target.value/100*0.5};
+document.getElementById('muteBtn').onclick=()=>{muted=!muted;if(master) master.gain.value=muted?0:document.getElementById('volume').value/100*0.5;document.getElementById('muteBtn').textContent=muted?'Unmute':'Mute'};
+
+// VR - white world first, never black
+let rotY=0, dragging=false, lastX=0, gazeTimer=null, gazeTarget=null;
+
+function isInIframe(){try{return window.self!==window.top;}catch(e){return true;}}
+function buildVR(){
+ let ring=document.getElementById('vrRing');
+ ring.innerHTML='<div style="background:#fff;border:2px solid #111;border-radius:14px;padding:16px;color:#111;text-align:center"><b>VR WORLD LOADED - WHITE WORLD</b><br><span style="color:#555">Tap any portal below to play it.</span></div>';
+ challenges.forEach((c,i)=>{
+  let d=document.createElement('div');d.className='vrPortal';
+  d.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div><b style="font-size:20px">'+c.title+'</b><div style="color:#aab0d6;margin-top:6px;font-size:15px">'+c.desc+'</div><div style="margin-top:8px;color:#7CFFB2">'+(found.has(c.id)?'✅ FOUND - '+c.flag:'▶ TAP TO PLAY')+'</div></div><div style="font-size:28px">➜</div></div>';
+  d.onclick=()=>{cur=i;render();closeVR();try{speak("Opening "+c.title);}catch(e){}};
+  ring.appendChild(d);
+ });
+ let test=document.createElement('div');test.className='vrPortal';test.style.borderColor='#00e5ff';test.innerHTML='<b>TEST - VR IS WORKING</b><div style="color:#aab0d6;margin-top:6px">If you can read this, VR opened. Tap to close VR.</div>';test.onclick=()=>{closeVR();};ring.appendChild(test);
+}
+function openVR(){
+ if(isInIframe()){let b=document.getElementById('iframeBanner');if(b)b.style.display='block';toast("Inside portal - tap panel to exit InstaVerse and open in new window");}
+ try{buildVR();}catch(e){document.getElementById('vrRing').innerHTML='<div style="background:#fff;color:#111;padding:20px">VR opened but build failed: '+e.message+'</div>';}
+ let ov=document.getElementById('vrOverlay');ov.style.display='block';ov.style.visibility='visible';ov.style.background='#ffffff';ov.style.opacity='1';ov.style.zIndex='9999';
+ let st=document.getElementById('vrStage');if(st)st.scrollTop=0;
+ toast("VR world loaded - white world");
+}
+function closeVR(){document.getElementById('vrOverlay').style.display='none';}
+document.getElementById('vrBtn').onclick=()=>{try{if(!musicOn)toggleMusic();}catch(e){}openVR();};
+document.getElementById('vrExitBtn').onclick=closeVR;
+// ---- PORTAL CLICK -> ASK INSTAVERSE TO EXIT IMMERSIVE, THEN OPEN NEW WINDOW ----
+// BREACH cannot open a window itself while InstaVerse is immersive - browser blocks it.
+// So BREACH sends a message to InstaVerse. InstaVerse MUST end its session first, then open window.
+// See instaverse-FIX-exit-immersive-then-open-window.js for the InstaVerse side.
+function requestExitImmersiveAndOpenWindow(){
+  let url=window.location.href.split('?')[0]+'?fullscreen=1&fromPortal=1';
+  // 1. Ask parent InstaVerse to exit immersive and open new window - THIS IS THE REAL FIX
+  try{window.parent.postMessage({type:'REQUEST_EXIT_IMMERSIVE_AND_OPEN_WINDOW', url:url}, '*');}catch(e){}
+  try{window.top.postMessage({type:'REQUEST_EXIT_IMMERSIVE_AND_OPEN_WINDOW', url:url}, '*');}catch(e){}
+  try{window.parent.postMessage({type:'OPEN_BOT_IN_NEW_WINDOW', url:url}, '*');}catch(e){}
+  // 2. If we are NOT in immersive (just in a 2D iframe), try opening directly as backup
+  // In immersive, this will be blocked, but the parent message above will handle it
+  if(!isInIframe()){
+    try{let a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener';a.style.display='none';document.body.appendChild(a);a.click();document.body.removeChild(a);}catch(e){}
+    try{let w=window.open(url,'BREACH_WINDOW_'+Date.now(),'popup=yes,width=1920,height=1080,left=0,top=0,noopener'); if(w) return true;}catch(e){}
+  }
+  toast("Asking InstaVerse to exit immersive and open BREACH in new window...");
+  // Show manual link in case InstaVerse is not listening yet
+  setTimeout(()=>{
+    let ov=document.getElementById('portalOverlay');
+    if(ov && isInIframe()){
+      ov.innerHTML='<h2>🥽 BREACH - WAITING FOR INSTAVERSE</h2><p>BREACH asked InstaVerse to exit immersive and open a new window.</p><p>If InstaVerse has the fix installed, a new window will open in a moment.</p><p>If nothing opens, InstaVerse does NOT have the fix yet - paste the InstaVerse fix file into InstaVerse.</p><a href="'+url+'" target="_blank" rel="noopener" style="display:inline-block;background:#ff2e88;color:#fff;padding:18px 28px;border-radius:999px;font-weight:800;font-size:20px;text-decoration:none;margin-top:12px">⤢ TRY OPEN IN NEW WINDOW MANUALLY →</a><p style="margin-top:12px;color:#aab0d6;word-break:break-all">'+url+'</p><button onclick="document.getElementById(\'portalOverlay\').style.display=\'none\'" class="secondary">Close</button>';
+      ov.style.display='flex';
+    }
+  }, 900);
+  return true;
+}
+document.getElementById('popBtn').onclick=()=>{requestExitImmersiveAndOpenWindow();};
+document.getElementById('portalOpenBtn').onclick=()=>{requestExitImmersiveAndOpenWindow();};
+document.getElementById('portalStayBtn').onclick=()=>{document.getElementById('portalOverlay').style.display='none';toast("Staying in portal - 2D only");};
+// First click on BREACH panel inside InstaVerse = ask to exit immersive and open new window
+let _portalAsked=false;
+document.addEventListener('pointerdown', (e)=>{
+  if(isInIframe() && !_portalAsked){
+    if(e.target && e.target.closest && e.target.closest('#portalOverlay')) return;
+    _portalAsked=true;
+    e.preventDefault(); e.stopPropagation();
+    requestExitImmersiveAndOpenWindow();
+    return false;
+  }
+}, true);
+try{if(isInIframe()){let b=document.getElementById('iframeBanner');if(b)b.style.display='block'; setTimeout(()=>{if(isInIframe() && !window.location.search.includes('fromPortal')){document.getElementById('portalOverlay').style.display='flex';}},800);}}catch(e){}
+// ---- TRUE IMMERSIVE 3D - gaze = highlight only, pinch = select ----
+let immersiveSession=null, immersiveRenderer=null, immersivePortals=[];
+function makeTextTexture(title, sub){
+  let c=document.createElement('canvas'); c.width=512; c.height=256;
+  let ctx=c.getContext('2d'); ctx.fillStyle='#11142a'; ctx.fillRect(0,0,512,256);
+  ctx.strokeStyle='#ff2e88'; ctx.lineWidth=10; ctx.strokeRect(8,8,496,240);
+  ctx.fillStyle='#fff'; ctx.font='bold 32px Arial'; ctx.textAlign='center'; ctx.fillText(title,256,90);
+  ctx.fillStyle='#aab0d6'; ctx.font='20px Arial'; ctx.fillText(sub,256,150);
+  ctx.fillStyle='#7CFFB2'; ctx.font='bold 22px Arial'; ctx.fillText('PINCH TO PLAY',256,200);
+  return new THREE.CanvasTexture(c);
+}
+async function startImmersive(){
+  if(isInIframe()){ document.getElementById('portalOverlay').style.display='flex'; toast("Inside portal - tap to exit InstaVerse and open in new window first"); return; }
+  if(!window.THREE){ toast("3D engine failed - showing white world"); openVR(); return; }
+  if(!navigator.xr){ toast("No WebXR - showing white world"); openVR(); return; }
+  try{ let sup=await navigator.xr.isSessionSupported('immersive-vr'); if(!sup){ openVR(); return; } }catch(e){ openVR(); return; }
+  try{
+    let renderer=new THREE.WebGLRenderer({antialias:true});
+    renderer.setPixelRatio(window.devicePixelRatio); renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled=true; renderer.setClearColor(0xf5f5f7,1);
+    let scene=new THREE.Scene(); scene.background=new THREE.Color(0xf5f5f7); scene.fog=new THREE.Fog(0xf5f5f7,5,18);
+    let cam=new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.1, 100); cam.position.set(0,1.6,0); scene.add(cam);
+    scene.add(new THREE.AmbientLight(0xffffff,1.0));
+    let dir=new THREE.DirectionalLight(0xffffff,1.2); dir.position.set(2,5,3); scene.add(dir);
+    let grid=new THREE.GridHelper(20,20,0xff2e88,0xcccccc); grid.position.y=0; scene.add(grid);
+    immersivePortals=[];
+    challenges.forEach((c,i)=>{
+      let ang=(i-2)*0.55; let x=Math.sin(ang)*3.2, z=-Math.cos(ang)*3.2;
+      let tex=makeTextTexture(c.title, found.has(c.id)?'FOUND':'TAP TO PLAY');
+      let mesh=new THREE.Mesh(new THREE.PlaneGeometry(1.8,0.9), new THREE.MeshBasicMaterial({map:tex}));
+      mesh.position.set(x,1.6,z); mesh.lookAt(0,1.6,0); mesh.userData.challengeIndex=i; scene.add(mesh); immersivePortals.push(mesh);
+    });
+    let exitTex=makeTextTexture('EXIT VR','Pinch to leave');
+    let exitMesh=new THREE.Mesh(new THREE.PlaneGeometry(1.4,0.7), new THREE.MeshBasicMaterial({map:exitTex}));
+    exitMesh.position.set(0,1.6,2.5); exitMesh.rotation.y=Math.PI; exitMesh.userData.isExit=true; scene.add(exitMesh); immersivePortals.push(exitMesh);
+    let controller=renderer.xr.getController(0);
+    controller.addEventListener('selectstart', ()=>{
+      let ray=new THREE.Raycaster(); let pos=new THREE.Vector3(); let d=new THREE.Vector3();
+      controller.getWorldPosition(pos); controller.getWorldDirection(d); ray.set(pos,d);
+      let hits=ray.intersectObjects(immersivePortals);
+      if(hits.length>0){ let h=hits[0].object; if(h.userData.isExit){ endImmersive(); return; } if(typeof h.userData.challengeIndex==='number'){ let idx=h.userData.challengeIndex; endImmersive(); setTimeout(()=>{cur=idx; render();},300); } }
+    });
+    scene.add(controller);
+    // GAZE = HIGHLIGHT ONLY - staring never kicks back to 2D, only pinch selects
+    let lastGaze=null;
+    renderer.setAnimationLoop(()=>{
+      if(!immersiveSession) return;
+      let ray=new THREE.Raycaster(); let d=new THREE.Vector3(); cam.getWorldDirection(d); ray.set(cam.position,d);
+      let hits=ray.intersectObjects(immersivePortals);
+      if(hits.length>0){ let m=hits[0].object; lastGaze=m; m.scale.setScalar(1.08); } else{ lastGaze=null; }
+      immersivePortals.forEach(p=>{ if(p!==lastGaze) p.scale.setScalar(1); });
+      renderer.render(scene,cam);
+    });
+    immersiveRenderer=renderer;
+    let session=await navigator.xr.requestSession('immersive-vr',{optionalFeatures:['local-floor','bounded-floor']});
+    immersiveSession=session;
+    await renderer.xr.setSession(session);
+    toast("Immersive 3D started - pinch to play, staring will not exit");
+    session.addEventListener('end', ()=>{ try{renderer.setAnimationLoop(null);}catch(e){} immersiveSession=null; immersiveRenderer=null; toast("Left immersive - back in BREACH 2D"); });
+  }catch(e){ toast("Immersive failed - showing white world"); try{if(immersiveRenderer) immersiveRenderer.setAnimationLoop(null);}catch(err){} openVR(); }
+}
+function endImmersive(){ try{ if(immersiveSession) immersiveSession.end(); }catch(e){} }
+document.getElementById('immersiveBtn').onclick=()=>{ try{if(!musicOn) toggleMusic();}catch(e){} startImmersive(); };
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeVR()});
+timerInt=setInterval(()=>{let s=Math.floor((Date.now()-start)/1000);let m=String(Math.floor(s/60)).padStart(2,'0'),ss=String(s%60).padStart(2,'0');document.getElementById('timerPill').textContent=m+':'+ss},1000);
+render(); updateHUD();
+</script>
+</body>
+</html>
